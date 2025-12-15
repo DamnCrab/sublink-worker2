@@ -279,7 +279,8 @@ export const formLogicFn = (t) => {
                         xray: origin + '/xray?' + queryString,
                         singbox: origin + '/singbox?' + queryString,
                         clash: origin + '/clash?' + queryString,
-                        surge: origin + '/surge?' + queryString
+                        surge: origin + '/surge?' + queryString,
+                        loon: origin + '/loon?' + queryString
                     };
 
                     // Scroll to results
@@ -347,7 +348,8 @@ export const formLogicFn = (t) => {
                                 xray: 'x',
                                 singbox: 'b',
                                 clash: 'c',
-                                surge: 's'
+                                surge: 's',
+                                loon: 'l'
                             };
 
                             shortened[type] = `${origin}/${prefixMap[type]}/${returnedCode}`;
@@ -400,7 +402,7 @@ export const formLogicFn = (t) => {
                     }
 
                     // Check if it's a full subscription URL with query params
-                    const fullMatch = url.pathname.match(/^\/(singbox|clash|xray|surge)$/);
+                    const fullMatch = url.pathname.match(/^\/(singbox|clash|xray|surge|loon)$/);
                     if (fullMatch && url.search) {
                         return true;
                     }

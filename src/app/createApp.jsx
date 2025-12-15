@@ -9,6 +9,7 @@ import { UpdateChecker } from '../components/UpdateChecker.jsx';
 import { SingboxConfigBuilder } from '../builders/SingboxConfigBuilder.js';
 import { ClashConfigBuilder } from '../builders/ClashConfigBuilder.js';
 import { SurgeConfigBuilder } from '../builders/SurgeConfigBuilder.js';
+import { LoonConfigBuilder } from '../builders/LoonConfigBuilder.js';
 import { createTranslator, resolveLanguage } from '../i18n/index.js';
 import { encodeBase64, tryDecodeSubscriptionLines } from '../utils.js';
 import { APP_NAME, APP_SUBTITLE } from '../constants.js';
@@ -200,6 +201,48 @@ export function createApp(bindings = {}) {
         }
     });
 
+    app.get('/loon', async (c) => {
+        try {
+            const config = c.req.query('config');
+            if (!config) {
+                return c.text('Missing config parameter', 400);
+            }
+
+            const selectedRules = parseSelectedRules(c.req.query('selectedRules'));
+            const customRules = parseJsonArray(c.req.query('customRules'));
+            const ua = c.req.query('ua') || DEFAULT_USER_AGENT;
+            const groupByCountry = parseBooleanFlag(c.req.query('group_by_country'));
+            const configId = c.req.query('configId');
+            const lang = c.get('lang');
+
+            let baseConfig;
+            if (configId) {
+                const storage = requireConfigStorage(services.configStorage);
+                baseConfig = await storage.getConfigById(configId);
+            }
+
+            // Using Dynamic Import to avoid circular dependency if any, though regular import should work if index.js is clean.
+            // But we already imported SurgeConfigBuilder.
+            // We need to import LoonConfigBuilder at the top level.
+            const builder = new LoonConfigBuilder(
+                config,
+                selectedRules,
+                customRules,
+                baseConfig,
+                lang,
+                ua,
+                groupByCountry
+            );
+            builder.setSubscriptionUrl(c.req.url);
+            await builder.build();
+
+            c.header('subscription-userinfo', 'upload=0; download=0; total=10737418240; expire=2546249531');
+            return c.text(builder.formatConfig());
+        } catch (error) {
+            return handleError(c, error, runtime.logger);
+        }
+    });
+
     app.get('/xray', async (c) => {
         const inputString = c.req.query('config');
         if (!inputString) {
@@ -277,6 +320,7 @@ export function createApp(bindings = {}) {
     };
 
     app.get('/s/:code', redirectHandler('surge'));
+    app.get('/l/:code', redirectHandler('loon'));
     app.get('/b/:code', redirectHandler('singbox'));
     app.get('/c/:code', redirectHandler('clash'));
     app.get('/x/:code', redirectHandler('xray'));
@@ -312,13 +356,13 @@ export function createApp(bindings = {}) {
 
             const prefix = pathParts[1];
             const shortCode = pathParts[2];
-            if (!['b', 'c', 'x', 's'].includes(prefix)) return c.text(t('invalidShortUrl'), 400);
+            if (!['b', 'c', 'x', 's', 'l'].includes(prefix)) return c.text(t('invalidShortUrl'), 400);
 
             const shortLinks = requireShortLinkService(services.shortLinks);
             const originalParam = await shortLinks.resolveShortCode(shortCode);
             if (!originalParam) return c.text(t('shortUrlNotFound'), 404);
 
-            const mapping = { b: 'singbox', c: 'clash', x: 'xray', s: 'surge' };
+            const mapping = { b: 'singbox', c: 'clash', x: 'xray', s: 'surge', l: 'loon' };
             const originalUrl = `${urlObj.origin}/${mapping[prefix]}${originalParam}`;
             return c.json({ originalUrl });
         } catch (error) {
