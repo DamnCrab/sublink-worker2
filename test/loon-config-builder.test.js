@@ -71,4 +71,45 @@ describe('LoonConfigBuilder', () => {
         const result = builder.convertProxy(proxy);
         expect(result).toBe('Trojan Node = trojan, example.com, 443, "password", sni=example.com, udp=true');
     });
+
+    it('should convert VLESS proxy correctly', () => {
+        const builder = new LoonConfigBuilder();
+        const proxy = {
+            tag: 'VLESS Node',
+            type: 'vless',
+            server: 'example.com',
+            server_port: 443,
+            uuid: 'uuid-vless',
+            udp: true,
+            transport: {
+                type: 'ws',
+                path: '/vless',
+                headers: { Host: 'vless.com' }
+            },
+            tls: {
+                enabled: true,
+                server_name: 'vless.com',
+                insecure: true,
+                reality: {
+                    enabled: true,
+                    public_key: 'pk-123',
+                    short_id: 'sid-123'
+                }
+            },
+            flow: 'xtls-rprx-vision'
+        };
+        const result = builder.convertProxy(proxy);
+        // Expect VLESS format
+        expect(result).toContain('VLESS Node = VLESS, example.com, 443, "uuid-vless"');
+        expect(result).toContain('transport=ws');
+        expect(result).toContain('path=/vless');
+        expect(result).toContain('host=vless.com');
+        expect(result).toContain('over-tls=true');
+        expect(result).toContain('sni=vless.com');
+        expect(result).toContain('skip-cert-verify=true');
+        expect(result).toContain('flow=xtls-rprx-vision');
+        expect(result).toContain('public-key="pk-123"');
+        expect(result).toContain('short-id=sid-123');
+        expect(result).toContain('udp=true');
+    });
 });

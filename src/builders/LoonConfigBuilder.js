@@ -84,6 +84,7 @@ export class LoonConfigBuilder extends SurgeConfigBuilder {
                 break;
 
             case 'hysteria2':
+            case 'hy2':
                 // Loon: Tag = Hysteria2, server, port, "password", ...
                 loonProxy = `${proxy.tag} = Hysteria2, ${proxy.server}, ${proxy.server_port}, "${proxy.password}"`;
                 if (proxy.tls?.server_name) {
@@ -98,6 +99,64 @@ export class LoonConfigBuilder extends SurgeConfigBuilder {
                 // obfs? Loon docs mention salamander-password
                 if (proxy.obfs?.type === 'salamander') {
                     if (proxy.obfs.password) loonProxy += `, salamander-password=${proxy.obfs.password}`;
+                }
+                break;
+
+            case 'vless':
+                // Loon: Tag = VLESS, server, port, "uuid", ...
+                loonProxy = `${proxy.tag} = VLESS, ${proxy.server}, ${proxy.server_port}, "${proxy.uuid}"`;
+
+                // Transport & Headers
+                if (proxy.transport?.type === 'ws') {
+                    loonProxy += ', transport=ws';
+                    if (proxy.transport.path) loonProxy += `, path=${proxy.transport.path}`;
+                    if (proxy.transport.headers?.Host) loonProxy += `, host=${proxy.transport.headers.Host}`;
+                } else if (proxy.transport?.type === 'http') {
+                    loonProxy += ', transport=http';
+                    if (proxy.transport.path) loonProxy += `, path=${proxy.transport.path}`;
+                    if (proxy.transport.headers?.Host) loonProxy += `, host=${proxy.transport.headers.Host}`;
+                } else {
+                    loonProxy += ', transport=tcp';
+                }
+
+                // TLS / Reality / XTLS
+                if (proxy.tls?.enabled) {
+                    loonProxy += ', over-tls=true';
+                    if (proxy.tls.server_name) loonProxy += `, sni=${proxy.tls.server_name}`;
+                    if (proxy.tls.insecure) loonProxy += `, skip-cert-verify=true`;
+
+                    // Reality / Vision
+                    if (proxy.flow) {
+                        loonProxy += `, flow=${proxy.flow}`;
+                    }
+                    if (proxy.tls.reality?.enabled) {
+                        if (proxy.tls.reality.public_key) loonProxy += `, public-key="${proxy.tls.reality.public_key}"`;
+                        if (proxy.tls.reality.short_id) loonProxy += `, short-id=${proxy.tls.reality.short_id}`;
+                    }
+                } else {
+                    loonProxy += ', over-tls=false';
+                }
+
+                if (proxy.udp) {
+                    loonProxy += `, udp=true`;
+                }
+                break;
+
+            case 'http':
+                loonProxy = `${proxy.tag} = http, ${proxy.server}, ${proxy.server_port}`;
+                if (proxy.username && proxy.password) {
+                    loonProxy += `, "${proxy.username}", "${proxy.password}"`;
+                }
+                break;
+
+            case 'https':
+                loonProxy = `${proxy.tag} = https, ${proxy.server}, ${proxy.server_port}`;
+                if (proxy.username && proxy.password) {
+                    loonProxy += `, "${proxy.username}", "${proxy.password}"`;
+                }
+                if (proxy.tls?.enabled) {
+                    if (proxy.tls.server_name) loonProxy += `, sni=${proxy.tls.server_name}`;
+                    if (proxy.tls.insecure) loonProxy += `, skip-cert-verify=true`;
                 }
                 break;
 
